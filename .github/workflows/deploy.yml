@@ -24,10 +24,10 @@ jobs:
 
       - name: Install, build and upload
         uses: withastro/action@v3
-        # with:
-        #   path: .
-        #   node-version: 20
-        #   package-manager: npm@latest
+        with:
+          path: .
+          node-version: 22
+          package-manager: npm@latest
 
   deploy:
     name: Deploy
