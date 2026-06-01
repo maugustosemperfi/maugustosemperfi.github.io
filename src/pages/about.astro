@@ -1,0 +1,108 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead
+      title="About — Marcos Augusto"
+      description="A bit more about who I am and what I'm working on."
+    />
+  </head>
+  <body>
+    <Header />
+    <main>
+      <article class="prose">
+        <h1>About</h1>
+
+        <p class="lead">
+          I'm Marcos Augusto, a software engineer based in Brazil. By day I work at
+          <a href="https://nubank.com.br">Nubank</a>, mostly in Clojure, on systems that need to keep
+          working for tens of millions of customers.
+        </p>
+
+        <p>
+          By night and weekend I build small things — finance trackers, expense readers, sim-racing
+          telemetry dashboards — and increasingly, agent infrastructure on top of
+          <a href="https://opencode.ai">opencode</a> and Claude Code.
+        </p>
+
+        <h2>What this blog is</h2>
+        <p>
+          A place to write down what I learn while doing the work. Not tutorials, not announcements —
+          more like a public lab notebook.
+        </p>
+
+        <ul>
+          <li>
+            <strong>Agent skills, harnesses, orchestration.</strong> I use and curate a mixed set of
+            agent workflows, some mine and some borrowed. I'll write about what holds up, what
+            falls apart, and what is worth making your own.
+          </li>
+          <li>
+            <strong>Clojure in production.</strong> Patterns, anti-patterns, and the occasional war
+            story from working on large systems.
+          </li>
+          <li>
+            <strong>Personal tools.</strong> The small fintech and tracker apps I build for myself —
+            and the design decisions behind them.
+          </li>
+          <li>
+            <strong>Sim racing.</strong> iRacing + SimHub dashboards, telemetry, and the weird
+            native-code edges that come with it.
+          </li>
+        </ul>
+
+        <h2>Stack I reach for</h2>
+        <p>
+          Clojure, TypeScript, Next.js, Flutter / Dart, Python, Postgres. Whatever the problem
+          actually wants.
+        </p>
+
+        <h2>Get in touch</h2>
+        <p>
+          Easiest is <a href="https://x.com/maugusto___">X / Twitter</a> or
+          <a href="mailto:augustoprofemp@gmail.com">email</a>. Code on
+          <a href="https://github.com/maugustosemperfi">GitHub</a>.
+        </p>
+      </article>
+    </main>
+    <Footer />
+    <style>
+      .prose {
+        max-width: 65ch;
+        margin: 0 auto;
+      }
+
+      .prose h1 {
+        margin-bottom: var(--space-8);
+      }
+
+      .prose h2 {
+        margin-top: var(--space-12);
+        margin-bottom: var(--space-4);
+      }
+
+      .prose p {
+        margin-bottom: var(--space-4);
+      }
+
+      .prose ul {
+        margin-bottom: var(--space-6);
+      }
+
+      .lead {
+        font-size: var(--text-lg);
+        line-height: var(--leading-snug);
+        color: var(--color-text);
+      }
+
+      .lead a {
+        font-weight: 500;
+      }
+    </style>
+  </body>
+</html>
