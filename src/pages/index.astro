@@ -36,31 +36,39 @@ const workModes = [
     eyebrow: 'Personal lab',
     title: 'Small apps that turn personal annoyances into useful interfaces.',
     copy:
-      'Finance trackers, receipt readers, sim-racing dashboards, and experiments in Flutter, Next.js, TypeScript, and whatever else the problem wants.',
+      'Finance trackers, receipt readers, home tooling, sim-racing dashboards, and experiments in Flutter, Next.js, TypeScript, and whatever else the problem wants.',
     tags: ['Flutter', 'Next.js', 'TypeScript', 'Telemetry'],
   },
 ];
 
 const projects = [
   {
-    name: 'Financial stack',
-    type: 'Personal finance',
-    href: 'https://github.com/maugustosemperfi/financial-web',
+    name: 'Fatura reader',
+    type: 'Private product tool',
+    href: '/about/',
     copy:
-      'A long-running thread across web, mobile, and backend experiments for understanding personal money flows through interfaces I actually use.',
-    stack: ['TypeScript', 'Dart', 'JavaScript'],
+      'A client-side app for parsing Brazilian credit card PDFs, comparing months, detecting recurring charges, and keeping sensitive financial data in the browser.',
+    stack: ['React', 'TypeScript', 'PDF parsing'],
   },
   {
-    name: 'Micro frontwindows',
-    type: 'Frontend architecture',
-    href: 'https://github.com/maugustosemperfi/micro-frontwindows-components',
+    name: 'Home controle',
+    type: 'Private full-stack app',
+    href: '/about/',
     copy:
-      'Experiments around windows, component boundaries, and micro-frontend ideas before they become heavy platform decisions.',
-    stack: ['JavaScript', 'CSS', 'Next.js'],
+      'A Flutter and backend system for remote home control, mixing mobile UX, authentication, device commands, deployment, and the very practical edge cases of physical spaces.',
+    stack: ['Flutter', 'NestJS', 'IoT'],
+  },
+  {
+    name: 'Portfolio tracker',
+    type: 'Private finance system',
+    href: '/about/',
+    copy:
+      'A Brazilian investment tracker built around B3 sync, portfolio summaries, dividend views, backend contracts, and product specs written for agent-assisted implementation.',
+    stack: ['Flutter', 'Spring Boot', 'Postgres'],
   },
   {
     name: 'Agent notebook',
-    type: 'Writing and research',
+    type: 'Public writing',
     href: '/blog/skills-are-not-prompts/',
     copy:
       'Notes from building with coding agents: what belongs in skills, what needs tests, and where human taste still has to steer.',
@@ -113,8 +121,8 @@ const projects = [
               <dd>Agent infrastructure and eval harnesses</dd>
             </div>
             <div>
-              <dt>Public profile</dt>
-              <dd>37 repos, writing since 2017</dd>
+              <dt>Public and private</dt>
+              <dd>37 public repos, plus private tools I can discuss without sharing access</dd>
             </div>
           </dl>
         </aside>
@@ -171,9 +179,14 @@ const projects = [
 
       <section class="projects reveal" id="projects" aria-labelledby="projects-title">
         <div class="section-kicker">
-          <p class="eyebrow">Project map</p>
-          <h2 id="projects-title">Enough context before the click.</h2>
+          <p class="eyebrow">Selected work</p>
+          <h2 id="projects-title">Artifacts with a real problem behind them.</h2>
         </div>
+        <p class="project-note">
+          This is not a complete repo list. Some of the strongest examples are private, so I describe
+          the product shape and engineering tradeoffs instead of linking to source access. Experiments
+          like fechar-negocio still matter, but these are the clearer signals.
+        </p>
         <div class="project-grid">
           {
             projects.map((project) => (
@@ -534,8 +547,16 @@ const projects = [
 
       .project-grid {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         gap: var(--space-4);
+      }
+
+      .project-note {
+        max-width: 62ch;
+        margin: calc(var(--space-8) * -0.45) 0 var(--space-6);
+        color: var(--color-text-secondary);
+        font-size: var(--text-sm);
+        line-height: 1.65;
       }
 
       .project-card {
