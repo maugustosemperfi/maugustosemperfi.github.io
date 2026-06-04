@@ -44,8 +44,8 @@ const workModes = [
 const projects = [
   {
     name: 'Fatura reader',
-    type: 'Private product tool',
-    href: '/about/',
+    type: 'Public product tool',
+    href: 'https://fatura-reader.pages.dev/',
     copy:
       'A client-side app for parsing Brazilian credit card PDFs, comparing months, detecting recurring charges, and keeping sensitive financial data in the browser.',
     stack: ['React', 'TypeScript', 'PDF parsing'],
@@ -65,6 +65,14 @@ const projects = [
     copy:
       'A Brazilian investment tracker built around B3 sync, portfolio summaries, dividend views, backend contracts, and product specs written for agent-assisted implementation.',
     stack: ['Flutter', 'Spring Boot', 'Postgres'],
+  },
+  {
+    name: 'cli-dm',
+    type: 'Public agent tool',
+    href: 'https://github.com/maugustosemperfi/cli-dm',
+    copy:
+      'A Claude Code work tracker that reads JSONL sessions, spawns agents as characters, turns tasks into monsters, and maps new sessions like a living dungeon.',
+    stack: ['TypeScript', 'Agents', 'Visualization'],
   },
   {
     name: 'Agent notebook',
@@ -184,8 +192,8 @@ const projects = [
         </div>
         <p class="project-note">
           This is not a complete repo list. Some of the strongest examples are private, so I describe
-          the product shape and engineering tradeoffs instead of linking to source access. Experiments
-          like fechar-negocio still matter, but these are the clearer signals.
+          the product shape and engineering tradeoffs instead of linking to source access. Public tools
+          like cli-dm get a direct link when the repo tells the story.
         </p>
         <div class="project-grid">
           {
