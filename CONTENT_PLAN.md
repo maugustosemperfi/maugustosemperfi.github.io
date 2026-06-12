@@ -8,7 +8,7 @@ Format: **Title** — angle / thesis / why it's worth writing.
 
 ## AI / agents / skills (the differentiator)
 
-1. **Skills are not prompts** — opener. What I learned from using, borrowing, and curating agent skills. The `description` field matters more than the body. Workflows > checklists. Curation matters more than folder size.
+1. **Skills are not prompts** — opener. What I learned from using, borrowing, and curating agent skills. The `description` field matters more than the body. Workflows > checklists. Curation matters more than folder size. **Published 2026-06-02.**
 
 2. **The triggering problem** — why most skills never load when they should. Anatomy of a `description` that the model can actually match against. Worked examples of bad vs. good.
 
@@ -43,6 +43,26 @@ Format: **Title** — angle / thesis / why it's worth writing.
 ## Flutter / mobile
 
 15. **Flutter for tools nobody else will use** — why the framework wins for solo, internal apps even though it loses for app-store consumer apps.
+
+## Mobile / design systems (the day job, written safely)
+
+All of these are written generically — patterns and tradeoffs, no employer internals,
+no codenames, no team or colleague names.
+
+20. **Design tokens at scale** — what it takes for a design system to serve hundreds of
+    engineers: token versioning, breaking changes, and who pays for migration.
+21. **i18n is not a string file** — validating translations in CI, copy/image consistency,
+    and what breaks when dozens of teams localize at once.
+22. **Backend-driven UI on mobile** — the real tradeoffs of server-driven components:
+    contracts, versioning, testing, and when it's worth it.
+23. **Upgrading Flutter when the blast radius is huge** — how to validate a framework bump
+    across a monorepo with hundreds of packages.
+24. **From frontend to mobile** — what transfers (taste, layout instincts, state thinking)
+    and what doesn't (lifecycles, threading, release trains).
+25. **The release train** — why mobile ships on rails, and the discipline it forces that
+    web deploys never did.
+26. **What makes an app feel fast** — startup time, time-to-interactive, and the metrics
+    nobody agrees on.
 
 ## Sim racing (the wildcard)
 

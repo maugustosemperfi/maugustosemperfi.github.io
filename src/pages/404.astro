@@ -1,0 +1,92 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import { useTranslations } from '../i18n/ui';
+
+const t = useTranslations('en');
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead title={`${t('404.title')} — Marcos Augusto`} description={t('404.line')} />
+  </head>
+  <body>
+    <Header />
+    <main class="site-container not-found reveal">
+      <h1>{t('404.title')}</h1>
+      <p>{t('404.line')}</p>
+      <nav class="not-found-links">
+        <a href="/">{t('404.home')}</a>
+        <a href="/blog">{t('404.writing')}</a>
+      </nav>
+    </main>
+    <Footer />
+
+    <script>
+      const target = document.querySelector('.reveal');
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduced || !target) {
+        target?.classList.add('is-visible');
+      } else {
+        requestAnimationFrame(() => target.classList.add('is-visible'));
+      }
+    </script>
+
+    <style>
+      .not-found {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        min-height: calc(100svh - 220px);
+        padding-block: var(--space-24);
+      }
+
+      .not-found h1 {
+        margin: 0 0 var(--space-4);
+        font-size: clamp(4rem, 18vw, 10rem);
+        line-height: 0.9;
+      }
+
+      .not-found p {
+        max-width: 40ch;
+        margin: 0 0 var(--space-8);
+        color: var(--color-text-secondary);
+        font-size: var(--text-lg);
+      }
+
+      .not-found-links {
+        display: flex;
+        gap: var(--space-4);
+        font-weight: 700;
+      }
+
+      .not-found-links a {
+        text-decoration: none;
+      }
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(16px);
+        transition:
+          opacity 500ms var(--ease-out-quint),
+          transform 500ms var(--ease-out-quint);
+      }
+
+      .reveal.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .reveal {
+          opacity: 1;
+          transform: none;
+          transition: none;
+        }
+      }
+    </style>
+  </body>
+</html>

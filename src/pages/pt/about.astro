@@ -1,0 +1,245 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { SOCIAL } from '../../consts';
+import { buildPersonJsonLd } from '../../lib/jsonld';
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <BaseHead
+      title="Sobre — Marcos Augusto"
+      description="Um pouco mais sobre quem sou e no que estou trabalhando."
+      locale="pt"
+      jsonLd={buildPersonJsonLd(new URL('/pt/about/', Astro.site).toString())}
+      alternateLocales={[{ locale: 'en', url: '/about/' }]}
+    />
+  </head>
+  <body>
+    <Header locale="pt" />
+    <main class="site-container page-main">
+      <article class="prose prose-column">
+        <h1>Sobre</h1>
+
+        <p class="lead">
+          Sou Marcos Augusto, engenheiro de software no Brasil. Trabalho no
+          <a href="https://nubank.com.br">Nubank</a> como engenheiro mobile, construindo em Flutter na
+          camada de plataforma de um app que atende dezenas de milhões de clientes. Antes do mobile
+          passei anos em frontend — e um período em Clojure em grandes sistemas backend — por isso me 
+          importo igualmente com como as coisas parecem e
+          se sobrevivem em produção.
+        </p>
+
+        <p>
+          À noite e nos fins de semana construo coisas pequenas — trackers financeiros, leitores de
+          despesas, dashboards de telemetria de sim racing, ferramentas para casa — e cada vez mais,
+          infraestrutura de agentes em cima do <a href="https://opencode.ai">opencode</a> e Claude
+          Code, incluindo o <a href="https://github.com/maugustosemperfi/cli-dm">cli-dm</a>, um
+          tracker público que transforma sessões do Claude Code em um mapa de agentes, tarefas e
+          milestones.
+        </p>
+
+        <p>
+          Nem todo trabalho significativo cabe num perfil público no GitHub. Alguns produtos estão no
+          ar enquanto o código permanece privado — o Fatura Reader é um — e o trabalho do dia a dia
+          shipa dentro de um monorepo privado. Escrevo sobre os problemas, decisões de produto e
+          tradeoffs de engenharia em vez de linkar para código.
+        </p>
+
+        <h2>A história até aqui</h2>
+        <ol class="timeline" data-timeline>
+          <li class="timeline-era reveal-era">
+            <span class="timeline-period">7</span>
+            <h3>Anos de frontend.</h3>
+            <p>
+              Construindo para a web na MV, Loft e outras. De onde vem o gosto por UI.
+            </p>
+          </li>
+          <li class="timeline-era reveal-era">
+            <span class="timeline-period">3 →</span>
+            <h3>Nubank — Flutter e Clojure.</h3>
+            <p>
+              Não foi uma passagem limpa de backend para mobile — os dois ao mesmo tempo. Clojure em
+              grandes sistemas que atendem dezenas de milhões de clientes; Flutter na plataforma
+              mobile — design system, internacionalização, ferramentas de release — a camada em que
+              outros engenheiros constroem.
+            </p>
+          </li>
+          <li class="timeline-era reveal-era">
+            <span class="timeline-period">2025 →</span>
+            <h3>O fio dos agentes.</h3>
+            <p>
+              Skills, harnesses, orquestração — rodando junto com tudo o mais.
+            </p>
+          </li>
+        </ol>
+
+        <h2>O que é este blog</h2>
+        <p>
+          Um lugar para escrever o que aprendo fazendo o trabalho. Não tutoriais, não anúncios — mais
+          um caderno de laboratório público.
+        </p>
+
+        <ul>
+          <li>
+            <strong>Mobile e design systems.</strong> Flutter em escala, design tokens, i18n,
+            engenharia de release — escrito de forma genérica, sem internals do empregador.
+          </li>
+          <li>
+            <strong>Skills, harnesses e orquestração de agentes.</strong> Uso e curo um conjunto
+            misto de workflows de agentes, alguns meus e outros emprestados. Também construo
+            ferramentas como <code>cli-dm</code> para tornar o trabalho com agentes visível. Escrevo
+            sobre o que se sustenta, o que quebra, e o que vale a pena fazer seu.
+          </li>
+          <li>
+            <strong>Ferramentas pessoais.</strong> Os pequenos apps fintech e trackers que construo
+            para mim — incluindo repositórios privados — e as decisões de design por trás deles.
+          </li>
+          <li>
+            <strong>Sim racing.</strong> Dashboards iRacing + SimHub, telemetria, e os cantos estranhos
+            de código nativo que vêm com isso.
+          </li>
+        </ul>
+        <p>Além da guerra ocasional dos anos de Clojure.</p>
+
+        <h2>Stack que uso</h2>
+        <p>
+          Flutter / Dart, TypeScript, React, Next.js, Clojure, Python, Postgres. O que o problema
+          realmente pedir.
+        </p>
+
+        <h2>Contato</h2>
+        <p>
+          Mais fácil pelo <a href={SOCIAL.twitter}>X / Twitter</a> ou
+          <a href={SOCIAL.email}>email</a>. Código no
+          <a href={SOCIAL.github}>GitHub</a>.
+          {SOCIAL.linkedin && (
+            <>
+              {' '}Perfil no <a href={SOCIAL.linkedin}>LinkedIn</a>.
+            </>
+          )}
+        </p>
+      </article>
+    </main>
+    <Footer locale="pt" />
+
+    <script>
+      const eras = document.querySelectorAll('.reveal-era');
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (reduced) {
+        eras.forEach((era) => era.classList.add('is-visible'));
+      } else if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                observer.unobserve(entry.target);
+              }
+            });
+          },
+          { threshold: 0.2 },
+        );
+        eras.forEach((era) => observer.observe(era));
+      } else {
+        eras.forEach((era) => era.classList.add('is-visible'));
+      }
+    </script>
+
+    <style>
+      .page-main {
+        padding-block: var(--space-8) var(--space-24);
+      }
+
+      .prose h1 {
+        margin-bottom: var(--space-8);
+      }
+
+      .prose h2 {
+        margin-top: var(--space-12);
+        margin-bottom: var(--space-4);
+      }
+
+      .lead {
+        font-size: var(--text-lg);
+        line-height: var(--leading-snug);
+      }
+
+      .timeline {
+        position: relative;
+        list-style: none;
+        margin: var(--space-8) 0 var(--space-12);
+        padding: 0 0 0 var(--space-8);
+      }
+
+      .timeline::before {
+        content: '';
+        position: absolute;
+        left: 0.45rem;
+        top: 0.5rem;
+        bottom: 0.5rem;
+        width: 2px;
+        background: var(--color-border-strong);
+      }
+
+      .timeline-era {
+        position: relative;
+        padding: 0 0 var(--space-8) var(--space-8);
+        opacity: 0;
+        transform: translateX(-12px);
+        transition:
+          opacity 500ms var(--ease-out-quint),
+          transform 500ms var(--ease-out-quint);
+      }
+
+      .timeline-era.is-visible {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .timeline-era::before {
+        content: '';
+        position: absolute;
+        left: calc(-1 * var(--space-8) + 0.15rem);
+        top: 0.45rem;
+        width: 12px;
+        height: 12px;
+        border: 2px solid var(--color-rust);
+        border-radius: 999px;
+        background: var(--color-bg);
+      }
+
+      .timeline-period {
+        display: block;
+        margin-bottom: var(--space-2);
+        color: var(--color-rust);
+        font-family: var(--font-mono);
+        font-size: var(--text-xs);
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .timeline-era h3 {
+        margin: 0 0 var(--space-2);
+        font-size: var(--text-xl);
+      }
+
+      .timeline-era p {
+        margin: 0;
+        color: var(--color-text-secondary);
+        font-size: var(--text-sm);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .timeline-era {
+          opacity: 1;
+          transform: none;
+          transition: none;
+        }
+      }
+    </style>
+  </body>
+</html>

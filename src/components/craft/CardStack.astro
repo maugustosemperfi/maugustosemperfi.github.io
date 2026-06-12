@@ -1,0 +1,128 @@
+---
+---
+
+<div class="study card-stack-study" data-card-stack>
+  <div class="stack" aria-label="Swipeable card stack demo">
+    <article class="stack-card" data-card style="--i: 0">Design tokens</article>
+    <article class="stack-card" data-card style="--i: 1">Motion specs</article>
+    <article class="stack-card" data-card style="--i: 2">Release notes</article>
+  </div>
+  <p class="study-note">Drag the top card left or right. Works with mouse and touch.</p>
+</div>
+
+<script>
+  const stackRoot = document.querySelector('[data-card-stack]');
+  const stack = stackRoot?.querySelector('.stack');
+  if (!stack) throw new Error('Card stack not found');
+
+  const cards = Array.from(stack.querySelectorAll('[data-card]'));
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let active = null;
+  let startX = 0;
+  let currentX = 0;
+
+  function layout() {
+    cards.forEach((card, i) => {
+      const offset = i * 6;
+      card.style.zIndex = String(cards.length - i);
+      if (card !== active) {
+        card.style.transform = `translateY(${offset}px) scale(${1 - i * 0.03})`;
+      }
+    });
+  }
+
+  function onStart(e) {
+    active = cards[0];
+    if (!active) return;
+    startX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+    active.setPointerCapture?.(e.pointerId);
+    active.style.transition = reduced ? 'none' : 'transform 80ms linear';
+  }
+
+  function onMove(e) {
+    if (!active) return;
+    currentX = (e.clientX ?? e.touches?.[0]?.clientX ?? 0) - startX;
+    const rotate = currentX * 0.04;
+    active.style.transform = `translateX(${currentX}px) rotate(${rotate}deg)`;
+  }
+
+  function onEnd() {
+    if (!active) return;
+    const threshold = 80;
+    active.style.transition = reduced ? 'none' : 'transform 280ms var(--ease-out-quint)';
+
+    if (Math.abs(currentX) > threshold) {
+      const dir = currentX > 0 ? 1 : -1;
+      active.style.transform = `translateX(${dir * 320}px) rotate(${dir * 12}deg)`;
+      active.style.opacity = '0';
+      setTimeout(() => {
+        stack?.appendChild(active);
+        active.style.opacity = '';
+        active.style.transform = '';
+        active = null;
+        currentX = 0;
+        layout();
+      }, reduced ? 0 : 280);
+    } else {
+      active.style.transform = '';
+      active = null;
+      currentX = 0;
+      layout();
+    }
+  }
+
+  cards.forEach((card) => {
+    card.addEventListener('pointerdown', onStart);
+    card.addEventListener('pointermove', onMove);
+    card.addEventListener('pointerup', onEnd);
+    card.addEventListener('pointercancel', onEnd);
+  });
+
+  layout();
+</script>
+
+<style>
+  .stack {
+    position: relative;
+    width: min(280px, 100%);
+    height: 200px;
+    margin: 0 auto;
+    touch-action: none;
+  }
+
+  .stack-card {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-bg-elevated);
+    box-shadow: var(--shadow-md);
+    color: var(--color-text);
+    cursor: grab;
+    font-family: var(--font-heading);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    user-select: none;
+    will-change: transform;
+  }
+
+  .stack-card:active {
+    cursor: grabbing;
+  }
+
+  .study-note {
+    margin: var(--space-6) 0 0;
+    text-align: center;
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stack-card {
+      transition: none !important;
+    }
+  }
+</style>

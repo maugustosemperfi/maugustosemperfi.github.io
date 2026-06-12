@@ -1,0 +1,158 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import CardStack from '../../components/craft/CardStack.astro';
+import MagneticButton from '../../components/craft/MagneticButton.astro';
+import SegmentedControl from '../../components/craft/SegmentedControl.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { useTranslations } from '../../i18n/ui';
+
+const t = useTranslations('pt');
+const repoBase =
+  'https://github.com/maugustosemperfi/maugustosemperfi.github.io/blob/main/src/components/craft';
+
+const studies = [
+  {
+    title: 'Segmented control',
+    note: 'Indicador deslizante estilo iOS com easing de mola e navegação por teclado.',
+    component: 'SegmentedControl.astro',
+    Study: SegmentedControl,
+  },
+  {
+    title: 'Magnetic button',
+    note: 'Atração por proximidade do cursor com estados de pressão satisfatórios no touch.',
+    component: 'MagneticButton.astro',
+    Study: MagneticButton,
+  },
+  {
+    title: 'Card stack',
+    note: 'Pilha arrastável com transforms que parecem física para mouse e touch.',
+    component: 'CardStack.astro',
+    Study: CardStack,
+  },
+];
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <BaseHead
+      title={`Craft — Marcos Augusto`}
+      description={t('craft.intro')}
+      locale="pt"
+      alternateLocales={[{ locale: 'en', url: '/craft/' }]}
+    />
+  </head>
+  <body>
+    <Header locale="pt" />
+    <main class="site-container page-main">
+      <div class="section-kicker">
+        <p class="eyebrow">{t('craft.eyebrow')}</p>
+        <h1>{t('craft.title')}</h1>
+        <p class="intro">{t('craft.intro')}</p>
+      </div>
+
+      <div class="study-grid">
+        {
+          studies.map(({ title, note, component, Study }) => (
+            <article class="study-card">
+              <header>
+                <h2>{title}</h2>
+                <p>{note}</p>
+                <a
+                  href={`${repoBase}/${component}`}
+                  target="_blank"
+                  rel="noopener"
+                  class="view-source"
+                >
+                  {t('craft.viewSource')}
+                </a>
+              </header>
+              <div class="study-demo">
+                <Study />
+              </div>
+            </article>
+          ))
+        }
+      </div>
+    </main>
+    <Footer locale="pt" />
+
+    <style>
+      .page-main {
+        padding-block: var(--space-8) var(--space-24);
+      }
+
+      .eyebrow {
+        margin: 0 0 var(--space-3);
+        color: var(--color-rust);
+        font-size: var(--text-xs);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .section-kicker h1 {
+        margin: 0 0 var(--space-4);
+        font-size: clamp(2.35rem, 5vw, 4rem);
+        line-height: 0.95;
+      }
+
+      .intro {
+        max-width: 62ch;
+        color: var(--color-text-secondary);
+        font-size: var(--text-lg);
+        line-height: 1.55;
+      }
+
+      .study-grid {
+        display: grid;
+        gap: var(--space-6);
+        margin-top: var(--space-12);
+      }
+
+      @media (min-width: 768px) {
+        .study-grid {
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+      }
+
+      .study-card {
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        background: var(--color-bg-elevated);
+        overflow: hidden;
+      }
+
+      .study-card header {
+        padding: var(--space-6);
+        border-bottom: 1px solid var(--color-border);
+      }
+
+      .study-card h2 {
+        margin: 0 0 var(--space-2);
+        font-size: var(--text-xl);
+      }
+
+      .study-card header p {
+        margin: 0 0 var(--space-3);
+        color: var(--color-text-secondary);
+        font-size: var(--text-sm);
+      }
+
+      .view-source {
+        font-size: var(--text-xs);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .study-demo {
+        padding: var(--space-8) var(--space-6);
+        min-height: 180px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    </style>
+  </body>
+</html>

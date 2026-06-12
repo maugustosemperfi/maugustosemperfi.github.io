@@ -1,24 +1,28 @@
 ---
 import { getCollection } from 'astro:content';
-import BaseHead from '../../components/BaseHead.astro';
-import Footer from '../../components/Footer.astro';
-import FormattedDate from '../../components/FormattedDate.astro';
-import Header from '../../components/Header.astro';
-import MaturityBadge from '../../components/MaturityBadge.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import BaseHead from '../../../components/BaseHead.astro';
+import Footer from '../../../components/Footer.astro';
+import Header from '../../../components/Header.astro';
+import MaturityBadge from '../../../components/MaturityBadge.astro';
+import FormattedDate from '../../../components/FormattedDate.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../../../consts';
+import { useTranslations } from '../../../i18n/ui';
+
+const t = useTranslations('pt');
 
 const posts = (await getCollection('blog'))
-  .filter((p) => p.data.lang === 'en')
+  .filter((p) => p.data.lang === 'pt')
   .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <BaseHead
-      title={`Writing — ${SITE_TITLE}`}
+      title={`${t('blog.title')} — ${SITE_TITLE}`}
       description={SITE_DESCRIPTION}
-      alternateLocales={[{ locale: 'pt', url: '/pt/blog/' }]}
+      locale="pt"
+      alternateLocales={[{ locale: 'en', url: '/blog/' }]}
     />
     <style>
       .page-main {
@@ -36,6 +40,11 @@ const posts = (await getCollection('blog'))
         color: var(--color-text-secondary);
         margin-bottom: var(--space-12);
         max-width: 65ch;
+      }
+
+      .empty {
+        color: var(--color-text-secondary);
+        font-size: var(--text-lg);
       }
 
       .post-list {
@@ -99,38 +108,37 @@ const posts = (await getCollection('blog'))
         font-size: var(--text-base);
         line-height: var(--leading-normal);
       }
-
-      @media (max-width: 560px) {
-        .post-link {
-          flex-direction: column;
-          gap: var(--space-1);
-        }
-      }
     </style>
   </head>
   <body>
-    <Header />
+    <Header locale="pt" />
     <main class="site-container page-main">
-      <h1 class="page-title">Writing</h1>
+      <h1 class="page-title">{t('blog.title')}</h1>
       <p class="page-description">{SITE_DESCRIPTION}</p>
 
-      <ol class="post-list">
-        {
-          posts.map((post) => (
-            <li class="post-item">
-              <a href={`/blog/${post.id}/`} class="post-link">
-                <span class="post-title-row">
-                  <span class="post-title">{post.data.title}</span>
-                  {post.data.maturity && <MaturityBadge maturity={post.data.maturity} />}
-                </span>
-                <FormattedDate date={post.data.pubDate} />
-              </a>
-              <p class="post-description">{post.data.description}</p>
-            </li>
-          ))
-        }
-      </ol>
+      {
+        posts.length === 0 ? (
+          <p class="empty">{t('blog.ptEmpty')}</p>
+        ) : (
+          <ol class="post-list">
+            {posts.map((post) => (
+              <li class="post-item">
+                <a href={`/pt/blog/${post.id}/`} class="post-link">
+                  <span class="post-title-row">
+                    <span class="post-title">{post.data.title}</span>
+                    {post.data.maturity && (
+                      <MaturityBadge maturity={post.data.maturity} locale="pt" />
+                    )}
+                  </span>
+                  <FormattedDate date={post.data.pubDate} />
+                </a>
+                <p class="post-description">{post.data.description}</p>
+              </li>
+            ))}
+          </ol>
+        )
+      }
     </main>
-    <Footer />
+    <Footer locale="pt" />
   </body>
 </html>

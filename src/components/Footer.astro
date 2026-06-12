@@ -1,15 +1,32 @@
 ---
+import { SOCIAL } from '../consts';
+import type { Locale } from '../i18n/ui';
+import { localizedPath, useTranslations } from '../i18n/ui';
+
+interface Props {
+  locale?: Locale;
+}
+
+const { locale = 'en' } = Astro.props;
+const t = useTranslations(locale);
 const today = new Date();
 ---
 
 <footer>
-  <div class="footer-content">
+  <div class="footer-content site-container">
     <div class="footer-left">
       <p class="copyright">&copy; {today.getFullYear()} Marcos Augusto</p>
-      <p class="tagline">Built with <a href="https://astro.build">Astro</a></p>
+      <p class="tagline">
+        {t('footer.tagline')} <a href="https://astro.build">Astro</a>
+      </p>
+      <nav class="footer-nav" aria-label="Footer">
+        <a href={localizedPath('/colophon', locale)}>{t('nav.colophon')}</a>
+        <a href={localizedPath('/til', locale)}>{t('nav.til')}</a>
+        <a href="/rss.xml">RSS</a>
+      </nav>
     </div>
     <div class="footer-right">
-      <a href="https://x.com/maugusto___" target="_blank" rel="noopener" aria-label="X / Twitter">
+      <a href={SOCIAL.twitter} target="_blank" rel="noopener" aria-label="X / Twitter">
         <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
           <path
             fill="currentColor"
@@ -17,7 +34,7 @@ const today = new Date();
           />
         </svg>
       </a>
-      <a href="https://github.com/maugustosemperfi" target="_blank" rel="noopener" aria-label="GitHub">
+      <a href={SOCIAL.github} target="_blank" rel="noopener" aria-label="GitHub">
         <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
           <path
             fill="currentColor"
@@ -45,13 +62,11 @@ const today = new Date();
   }
 
   .footer-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: var(--space-8) var(--space-4);
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: var(--space-4);
+    padding-block: var(--space-8);
   }
 
   .footer-left {
@@ -82,6 +97,19 @@ const today = new Date();
     color: var(--color-accent);
   }
 
+  .footer-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+  }
+
+  .footer-nav a {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
   .footer-right {
     display: flex;
     gap: var(--space-3);
@@ -100,7 +128,7 @@ const today = new Date();
 
   .footer-right a:hover {
     color: var(--color-accent);
-    background: oklch(45% 0.12 200 / 0.08);
+    background: var(--color-header-hover-bg);
   }
 
   @media (max-width: 640px) {
@@ -111,6 +139,10 @@ const today = new Date();
 
     .footer-left {
       align-items: center;
+    }
+
+    .footer-nav {
+      justify-content: center;
     }
   }
 </style>

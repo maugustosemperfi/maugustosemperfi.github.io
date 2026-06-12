@@ -1,18 +1,59 @@
 ---
-import { SITE_TITLE } from '../consts';
+import { SITE_TITLE, SOCIAL } from '../consts';
+import type { Locale } from '../i18n/ui';
+import { localizedPath, useTranslations } from '../i18n/ui';
+import CommandPalette from './CommandPalette.astro';
 import HeaderLink from './HeaderLink.astro';
+
+interface Props {
+  locale?: Locale;
+}
+
+const { locale = 'en' } = Astro.props;
+const t = useTranslations(locale);
+const otherLocale: Locale = locale === 'en' ? 'pt' : 'en';
+const strippedPath = Astro.url.pathname.replace(/^\/pt/, '') || '/';
+const isBlogPost = /^\/blog\/[^/]+\/?$/.test(strippedPath);
+const switchPath = isBlogPost
+  ? localizedPath('/blog', otherLocale)
+  : localizedPath(strippedPath, otherLocale);
 ---
 
 <header>
-  <nav>
-    <a href="/" class="logo">{SITE_TITLE}</a>
+  <nav class="site-container">
+    <a href={localizedPath('/', locale)} class="logo">{SITE_TITLE}</a>
     <div class="nav-links">
-      <HeaderLink href="/">Home</HeaderLink>
-      <HeaderLink href="/blog">Writing</HeaderLink>
-      <HeaderLink href="/about">About</HeaderLink>
+      <HeaderLink href={localizedPath('/', locale)}>{t('nav.home')}</HeaderLink>
+      <HeaderLink href={localizedPath('/blog', locale)}>{t('nav.writing')}</HeaderLink>
+      <HeaderLink href={localizedPath('/craft', locale)}>{t('nav.craft')}</HeaderLink>
+      <HeaderLink href={localizedPath('/about', locale)}>{t('nav.about')}</HeaderLink>
     </div>
-    <div class="social-links">
-      <a href="https://x.com/maugusto___" target="_blank" rel="noopener" aria-label="X / Twitter">
+    <div class="header-actions">
+      <a href={switchPath} class="lang-switch" aria-label={t('lang.switch')}>
+        {locale === 'en' ? 'PT' : 'EN'}
+      </a>
+      <button type="button" class="icon-btn palette-trigger" data-palette-trigger aria-label={t('nav.search')}>
+        <span class="search-hint" aria-hidden="true">⌘K</span>
+      </button>
+      <button type="button" class="icon-btn theme-toggle" aria-label={t('nav.toggleTheme')}>
+        <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2" />
+          <path
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+          />
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path
+            fill="currentColor"
+            d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5Z"
+          />
+        </svg>
+      </button>
+      <a href={SOCIAL.twitter} target="_blank" rel="noopener" aria-label="X / Twitter" class="icon-btn">
         <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true">
           <path
             fill="currentColor"
@@ -20,7 +61,7 @@ import HeaderLink from './HeaderLink.astro';
           />
         </svg>
       </a>
-      <a href="https://github.com/maugustosemperfi" target="_blank" rel="noopener" aria-label="GitHub">
+      <a href={SOCIAL.github} target="_blank" rel="noopener" aria-label="GitHub" class="icon-btn">
         <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true">
           <path
             fill="currentColor"
@@ -31,24 +72,33 @@ import HeaderLink from './HeaderLink.astro';
     </div>
   </nav>
 </header>
+<CommandPalette locale={locale} />
+
+<script>
+  const toggle = document.querySelector('.theme-toggle');
+  toggle?.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+  });
+</script>
 
 <style>
   header {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: oklch(98% 0.005 60 / 0.85);
+    background: var(--color-header-bg);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--color-border);
   }
 
   nav {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: var(--space-4) var(--space-4);
     display: flex;
     align-items: center;
     gap: var(--space-8);
+    padding-block: var(--space-4);
   }
 
   .logo {
@@ -70,26 +120,69 @@ import HeaderLink from './HeaderLink.astro';
     margin-left: auto;
   }
 
-  .social-links {
-    display: flex;
-    gap: var(--space-3);
-    margin-left: var(--space-6);
-  }
-
-  .social-links a {
+  .header-actions {
     display: flex;
     align-items: center;
+    gap: var(--space-2);
+  }
+
+  .lang-switch {
+    min-width: 36px;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
     color: var(--color-text-secondary);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    text-decoration: none;
     border-radius: 6px;
     transition: color var(--transition-fast), background var(--transition-fast);
   }
 
-  .social-links a:hover {
+  .lang-switch:hover {
     color: var(--color-accent);
-    background: oklch(45% 0.12 200 / 0.08);
+    background: var(--color-header-hover-bg);
+    text-decoration: none;
+  }
+
+  .icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    min-height: 36px;
+    color: var(--color-text-secondary);
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    transition: color var(--transition-fast), background var(--transition-fast);
+    text-decoration: none;
+  }
+
+  .icon-btn:hover {
+    color: var(--color-accent);
+    background: var(--color-header-hover-bg);
+  }
+
+  .palette-trigger .search-hint {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .icon-moon {
+    display: none;
+  }
+
+  :global([data-theme='dark']) .icon-sun {
+    display: none;
+  }
+
+  :global([data-theme='dark']) .icon-moon {
+    display: block;
   }
 
   @media (max-width: 640px) {
@@ -99,10 +192,6 @@ import HeaderLink from './HeaderLink.astro';
 
     .nav-links {
       gap: var(--space-4);
-    }
-
-    .social-links {
-      display: none;
     }
   }
 </style>

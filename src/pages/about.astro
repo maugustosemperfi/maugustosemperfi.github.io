@@ -2,6 +2,10 @@
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
+import { SOCIAL } from '../consts';
+import { buildPersonJsonLd } from '../lib/jsonld';
+
+const personJsonLd = buildPersonJsonLd(new URL('/about/', Astro.site).toString());
 ---
 
 <!doctype html>
@@ -10,35 +14,66 @@ import Header from '../components/Header.astro';
     <BaseHead
       title="About — Marcos Augusto"
       description="A bit more about who I am and what I'm working on."
+      jsonLd={personJsonLd}
+      alternateLocales={[{ locale: 'pt', url: '/pt/about/' }]}
     />
   </head>
   <body>
     <Header />
-    <main>
-      <article class="prose">
+    <main class="site-container page-main">
+      <article class="prose prose-column">
         <h1>About</h1>
 
         <p class="lead">
-          I'm Marcos Augusto, a software engineer based in Brazil. By day I work at
-          <a href="https://nubank.com.br">Nubank</a>, mostly in Clojure, on systems that need to keep
-          working for tens of millions of customers.
+          I'm Marcos Augusto, a software engineer based in Brazil. I work at
+          <a href="https://nubank.com.br">Nubank</a> as a mobile engineer, building in Flutter on the
+          platform layer of an app that serves tens of millions of customers. Before mobile I spent
+          years in frontend — and a stretch in Clojure on large backend systems — which is why I care
+          equally about how things look and whether they
+          survive production.
         </p>
 
         <p>
           By night and weekend I build small things — finance trackers, expense readers, sim-racing
-          telemetry dashboards, home-control tools — and increasingly, agent infrastructure on top of
+          telemetry dashboards, home tooling — and increasingly, agent infrastructure on top of
           <a href="https://opencode.ai">opencode</a> and Claude Code, including
           <a href="https://github.com/maugustosemperfi/cli-dm">cli-dm</a>, a public tracker that turns
-          Claude Code JSONL sessions into a map of agents, tasks, milestones, and paths.
+          Claude Code sessions into a map of agents, tasks, and milestones.
         </p>
 
         <p>
-          Not all meaningful work fits into a public GitHub profile. Some projects stay private, like
-          <code>fatura-reader</code>, <code>home-controle</code>, and my portfolio-tracking work, but
-          I can still write about the problems, product decisions, and engineering tradeoffs without
-          exposing the repositories. Other experiments, like <code>fechar-negocio</code>, are part of
-          the same habit: turning a sharp personal or business itch into a working product surface.
+          Not all meaningful work fits a public GitHub profile. Some products are live while their
+          source stays private — Fatura Reader is one — and my day job ships inside a private monorepo.
+          I write about the problems, product decisions, and engineering tradeoffs instead of linking to
+          code.
         </p>
+
+        <h2>The story so far</h2>
+        <ol class="timeline" data-timeline>
+          <li class="timeline-era reveal-era">
+            <span class="timeline-period">7</span>
+            <h3>Frontend years.</h3>
+            <p>
+              Building for the web at MV, Loft and others. Where the UI taste comes from.
+            </p>
+          </li>
+          <li class="timeline-era reveal-era">
+            <span class="timeline-period">3 →</span>
+            <h3>Nubank — Flutter and Clojure.</h3>
+            <p>
+              Not a handoff from backend to mobile — both at once. Clojure on large systems that
+              serve tens of millions of customers; Flutter on the mobile platform — design system,
+              internationalization, release tooling — the layer other engineers build on.
+            </p>
+          </li>
+          <li class="timeline-era reveal-era">
+            <span class="timeline-period">2025 →</span>
+            <h3>The agents thread.</h3>
+            <p>
+              Skills, harnesses, orchestration — running alongside everything else.
+            </p>
+          </li>
+        </ol>
 
         <h2>What this blog is</h2>
         <p>
@@ -48,14 +83,14 @@ import Header from '../components/Header.astro';
 
         <ul>
           <li>
+            <strong>Mobile and design systems.</strong> Flutter at scale, design tokens, i18n, release
+            engineering — written generically, no employer internals.
+          </li>
+          <li>
             <strong>Agent skills, harnesses, orchestration.</strong> I use and curate a mixed set of
             agent workflows, some mine and some borrowed. I also build tools like <code>cli-dm</code>
             to make agent work visible as it unfolds. I'll write about what holds up, what falls apart,
             and what is worth making your own.
-          </li>
-          <li>
-            <strong>Clojure in production.</strong> Patterns, anti-patterns, and the occasional war
-            story from working on large systems.
           </li>
           <li>
             <strong>Personal tools.</strong> The small fintech and tracker apps I build for myself —
@@ -66,26 +101,56 @@ import Header from '../components/Header.astro';
             native-code edges that come with it.
           </li>
         </ul>
+        <p>Plus the occasional war story from the Clojure years.</p>
 
         <h2>Stack I reach for</h2>
         <p>
-          Clojure, TypeScript, Next.js, Flutter / Dart, Python, Postgres. Whatever the problem
+          Flutter / Dart, TypeScript, React, Next.js, Clojure, Python, Postgres. Whatever the problem
           actually wants.
         </p>
 
         <h2>Get in touch</h2>
         <p>
-          Easiest is <a href="https://x.com/maugusto___">X / Twitter</a> or
-          <a href="mailto:augustoprofemp@gmail.com">email</a>. Code on
-          <a href="https://github.com/maugustosemperfi">GitHub</a>.
+          Easiest is <a href={SOCIAL.twitter}>X / Twitter</a> or
+          <a href={SOCIAL.email}>email</a>. Code on
+          <a href={SOCIAL.github}>GitHub</a>.
+          {SOCIAL.linkedin && (
+            <>
+              {' '}Profile on <a href={SOCIAL.linkedin}>LinkedIn</a>.
+            </>
+          )}
         </p>
       </article>
     </main>
     <Footer />
+
+    <script>
+      const eras = document.querySelectorAll('.reveal-era');
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (reduced) {
+        eras.forEach((era) => era.classList.add('is-visible'));
+      } else if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                observer.unobserve(entry.target);
+              }
+            });
+          },
+          { threshold: 0.2 },
+        );
+        eras.forEach((era) => observer.observe(era));
+      } else {
+        eras.forEach((era) => era.classList.add('is-visible'));
+      }
+    </script>
+
     <style>
-      .prose {
-        max-width: 65ch;
-        margin: 0 auto;
+      .page-main {
+        padding-block: var(--space-8) var(--space-24);
       }
 
       .prose h1 {
@@ -101,7 +166,8 @@ import Header from '../components/Header.astro';
         margin-bottom: var(--space-4);
       }
 
-      .prose ul {
+      .prose ul,
+      .prose ol {
         margin-bottom: var(--space-6);
       }
 
@@ -113,6 +179,83 @@ import Header from '../components/Header.astro';
 
       .lead a {
         font-weight: 500;
+      }
+
+      .timeline {
+        position: relative;
+        list-style: none;
+        margin: var(--space-8) 0 var(--space-12);
+        padding: 0 0 0 var(--space-8);
+      }
+
+      .timeline::before {
+        content: '';
+        position: absolute;
+        left: 0.45rem;
+        top: 0.5rem;
+        bottom: 0.5rem;
+        width: 2px;
+        background: var(--color-border-strong);
+      }
+
+      .timeline-era {
+        position: relative;
+        padding: 0 0 var(--space-8) var(--space-8);
+        opacity: 0;
+        transform: translateX(-12px);
+        transition:
+          opacity 500ms var(--ease-out-quint),
+          transform 500ms var(--ease-out-quint);
+      }
+
+      .timeline-era.is-visible {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .timeline-era::before {
+        content: '';
+        position: absolute;
+        left: calc(-1 * var(--space-8) + 0.15rem);
+        top: 0.45rem;
+        width: 12px;
+        height: 12px;
+        border: 2px solid var(--color-rust);
+        border-radius: 999px;
+        background: var(--color-bg);
+      }
+
+      .timeline-period {
+        display: block;
+        margin-bottom: var(--space-2);
+        color: var(--color-rust);
+        font-family: var(--font-mono);
+        font-size: var(--text-xs);
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.02em;
+      }
+
+      .timeline-era h3 {
+        margin: 0 0 var(--space-2);
+        font-family: var(--font-heading);
+        font-size: var(--text-xl);
+        font-weight: 700;
+      }
+
+      .timeline-era p {
+        margin: 0;
+        color: var(--color-text-secondary);
+        font-size: var(--text-sm);
+        line-height: 1.6;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .timeline-era {
+          opacity: 1;
+          transform: none;
+          transition: none;
+        }
       }
     </style>
   </body>
