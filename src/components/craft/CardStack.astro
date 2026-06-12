@@ -15,63 +15,80 @@
   const stack = stackRoot?.querySelector('.stack');
   if (!stack) throw new Error('Card stack not found');
 
-  const cards = Array.from(stack.querySelectorAll('[data-card]'));
+  /** Visual order: index 0 is the top card. Rotated on each successful swipe. */
+  let deck = Array.from(stack.querySelectorAll('[data-card]'));
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let active = null;
   let startX = 0;
   let currentX = 0;
+  let animating = false;
 
   function layout() {
-    cards.forEach((card, i) => {
+    deck.forEach((card, i) => {
       const offset = i * 6;
-      card.style.zIndex = String(cards.length - i);
+      card.style.zIndex = String(deck.length - i);
       if (card !== active) {
         card.style.transform = `translateY(${offset}px) scale(${1 - i * 0.03})`;
+        card.style.opacity = '';
       }
     });
   }
 
   function onStart(e) {
-    active = cards[0];
-    if (!active) return;
-    startX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
-    active.setPointerCapture?.(e.pointerId);
-    active.style.transition = reduced ? 'none' : 'transform 80ms linear';
+    if (animating) return;
+    const card = e.currentTarget;
+    if (card !== deck[0]) return;
+
+    active = card;
+    startX = e.clientX;
+    card.setPointerCapture(e.pointerId);
+    card.style.transition = reduced ? 'none' : 'transform 80ms linear';
   }
 
   function onMove(e) {
     if (!active) return;
-    currentX = (e.clientX ?? e.touches?.[0]?.clientX ?? 0) - startX;
+    currentX = e.clientX - startX;
     const rotate = currentX * 0.04;
     active.style.transform = `translateX(${currentX}px) rotate(${rotate}deg)`;
   }
 
-  function onEnd() {
+  function onEnd(e) {
     if (!active) return;
+
+    const card = active;
+    card.releasePointerCapture?.(e.pointerId);
+
     const threshold = 80;
-    active.style.transition = reduced ? 'none' : 'transform 280ms var(--ease-out-quint)';
+    card.style.transition = reduced
+      ? 'none'
+      : 'transform 280ms var(--ease-out-quint), opacity 280ms var(--ease-out-quint)';
 
     if (Math.abs(currentX) > threshold) {
+      animating = true;
       const dir = currentX > 0 ? 1 : -1;
-      active.style.transform = `translateX(${dir * 320}px) rotate(${dir * 12}deg)`;
-      active.style.opacity = '0';
+      card.style.transform = `translateX(${dir * 320}px) rotate(${dir * 12}deg)`;
+      card.style.opacity = '0';
+
+      const duration = reduced ? 0 : 280;
       setTimeout(() => {
-        stack?.appendChild(active);
-        active.style.opacity = '';
-        active.style.transform = '';
+        deck = [...deck.slice(1), deck[0]];
+        card.style.opacity = '';
+        card.style.transform = '';
+        card.style.transition = '';
         active = null;
         currentX = 0;
+        animating = false;
         layout();
-      }, reduced ? 0 : 280);
+      }, duration);
     } else {
-      active.style.transform = '';
+      card.style.transform = '';
       active = null;
       currentX = 0;
       layout();
     }
   }
 
-  cards.forEach((card) => {
+  deck.forEach((card) => {
     card.addEventListener('pointerdown', onStart);
     card.addEventListener('pointermove', onMove);
     card.addEventListener('pointerup', onEnd);
