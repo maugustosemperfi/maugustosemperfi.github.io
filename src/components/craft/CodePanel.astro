@@ -1,0 +1,391 @@
+---
+/**
+ * CodePanel — tabbed in-page source viewer for a single study component.
+ * Tabs: Behavior (script) / Markup / Styles — highlighted at build time via Shiki
+ * with the same dual themes configured in astro.config.mjs.
+ * Copy-to-clipboard per panel and expand/collapse for tall panels.
+ */
+import { Code } from 'astro:components';
+
+interface Props {
+  markup: string;
+  script: string;
+  style: string;
+  panelId: string;
+  labelTablist: string;
+  labelBehavior: string;
+  labelMarkup: string;
+  labelStyles: string;
+  labelCopy: string;
+  labelCopied: string;
+  labelShowAll: string;
+  labelCollapse: string;
+}
+
+const {
+  markup,
+  script,
+  style,
+  panelId,
+  labelTablist,
+  labelBehavior,
+  labelMarkup,
+  labelStyles,
+  labelCopy,
+  labelCopied,
+  labelShowAll,
+  labelCollapse,
+} = Astro.props;
+
+// Build-time guard: every study must yield all three sections.
+// Failing the build beats silently shipping an empty panel.
+for (const [name, section] of [
+  ['script', script],
+  ['markup', markup],
+  ['style', style],
+] as const) {
+  if (!section.trim()) {
+    throw new Error(`[CodePanel] "${name}" section is empty for panel "${panelId}". Check craft-source.ts.`);
+  }
+}
+
+const tabs = [
+  { id: `${panelId}-behavior`, label: labelBehavior, code: script, lang: 'js' as const },
+  { id: `${panelId}-markup`, label: labelMarkup, code: markup, lang: 'html' as const },
+  { id: `${panelId}-styles`, label: labelStyles, code: style, lang: 'css' as const },
+];
+---
+
+<div
+  class="code-panel"
+  data-code-panel
+  data-copied-label={labelCopied}
+  data-show-all-label={labelShowAll}
+  data-collapse-label={labelCollapse}
+>
+  <div class="cp-tabs" role="tablist" aria-label={labelTablist}>
+    <div class="cp-tab-indicator" aria-hidden="true"></div>
+    {tabs.map((tab, i) => (
+      <button
+        type="button"
+        role="tab"
+        class="cp-tab"
+        id={`${tab.id}-tab`}
+        aria-controls={`${tab.id}-panel`}
+        aria-selected={i === 0 ? 'true' : 'false'}
+        tabindex={i === 0 ? 0 : -1}
+        data-tab-btn
+      >
+        {tab.label}
+      </button>
+    ))}
+  </div>
+
+  {tabs.map((tab, i) => (
+    <div
+      class="cp-panel"
+      role="tabpanel"
+      id={`${tab.id}-panel`}
+      aria-labelledby={`${tab.id}-tab`}
+      hidden={i !== 0}
+      data-tab-panel
+    >
+      <div class="cp-code-wrap" data-code-wrap>
+        <Code
+          code={tab.code}
+          lang={tab.lang}
+          themes={{ light: 'vitesse-light', dark: 'vitesse-dark' }}
+        />
+        <div class="cp-fade-mask" aria-hidden="true"></div>
+        <button type="button" class="cp-copy-btn" data-copy-btn>{labelCopy}</button>
+      </div>
+      <button type="button" class="cp-expand-btn" data-expand-btn hidden aria-expanded="false">
+        {labelShowAll}
+      </button>
+    </div>
+  ))}
+</div>
+
+<script>
+  const COLLAPSED_MAX = 420; // must match --cp-collapsed-max in the styles below
+
+  document.querySelectorAll<HTMLElement>('[data-code-panel]').forEach((panel) => {
+    const tabBtns = Array.from(panel.querySelectorAll<HTMLButtonElement>('[data-tab-btn]'));
+    const tabPanels = Array.from(panel.querySelectorAll<HTMLElement>('[data-tab-panel]'));
+    const indicator = panel.querySelector<HTMLElement>('.cp-tab-indicator');
+    const copiedLabel = panel.dataset.copiedLabel ?? 'Copied';
+    const showAllLabel = panel.dataset.showAllLabel ?? 'Show all';
+    const collapseLabel = panel.dataset.collapseLabel ?? 'Collapse';
+
+    // --- Expand / collapse per tab panel ---
+    const overflowChecks: Array<() => void> = [];
+
+    tabPanels.forEach((tabPanel) => {
+      const codeWrap = tabPanel.querySelector<HTMLElement>('[data-code-wrap]');
+      const expandBtn = tabPanel.querySelector<HTMLButtonElement>('[data-expand-btn]');
+      if (!codeWrap || !expandBtn) return;
+
+      let userExpanded = false;
+
+      function checkOverflow() {
+        if (tabPanel.hidden) return;
+        const overflows = codeWrap!.scrollHeight > COLLAPSED_MAX + 16;
+        expandBtn!.hidden = !overflows;
+        codeWrap!.classList.toggle('is-collapsed', overflows && !userExpanded);
+      }
+
+      expandBtn.addEventListener('click', () => {
+        userExpanded = !userExpanded;
+        codeWrap.classList.toggle('is-collapsed', !userExpanded);
+        expandBtn.textContent = userExpanded ? collapseLabel : showAllLabel;
+        expandBtn.setAttribute('aria-expanded', String(userExpanded));
+      });
+
+      overflowChecks.push(checkOverflow);
+    });
+
+    // --- Tab switching (roving tabindex + arrow keys) ---
+    function positionIndicator(index: number) {
+      const btn = tabBtns[index];
+      if (!indicator || !btn) return;
+      indicator.style.width = `${btn.offsetWidth}px`;
+      indicator.style.transform = `translateX(${btn.offsetLeft}px)`;
+    }
+
+    function activateTab(index: number) {
+      tabBtns.forEach((btn, i) => {
+        const active = i === index;
+        btn.setAttribute('aria-selected', String(active));
+        btn.tabIndex = active ? 0 : -1;
+      });
+      tabPanels.forEach((p, i) => {
+        p.hidden = i !== index;
+      });
+      positionIndicator(index);
+      overflowChecks[index]?.();
+    }
+
+    tabBtns.forEach((btn, i) => {
+      btn.addEventListener('click', () => activateTab(i));
+      btn.addEventListener('keydown', (e) => {
+        let next = i;
+        if (e.key === 'ArrowRight') next = (i + 1) % tabBtns.length;
+        else if (e.key === 'ArrowLeft') next = (i - 1 + tabBtns.length) % tabBtns.length;
+        else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End') next = tabBtns.length - 1;
+        else return;
+        e.preventDefault();
+        activateTab(next);
+        tabBtns[next].focus();
+      });
+    });
+
+    // --- Copy to clipboard (reads the rendered code text — always exact) ---
+    tabPanels.forEach((tabPanel) => {
+      const copyBtn = tabPanel.querySelector<HTMLButtonElement>('[data-copy-btn]');
+      const pre = tabPanel.querySelector<HTMLPreElement>('pre');
+      if (!copyBtn || !pre) return;
+
+      let revertTimer: ReturnType<typeof setTimeout> | undefined;
+      copyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(pre.textContent ?? '');
+        } catch {
+          return; // clipboard unavailable — keep the label as-is
+        }
+        const original = copyBtn.dataset.label ?? copyBtn.textContent ?? '';
+        copyBtn.dataset.label = original;
+        copyBtn.textContent = copiedLabel;
+        copyBtn.classList.add('is-copied');
+        clearTimeout(revertTimer);
+        revertTimer = setTimeout(() => {
+          copyBtn.textContent = original;
+          copyBtn.classList.remove('is-copied');
+        }, 1500);
+      });
+    });
+
+    // --- Initial layout (re-measure once fonts settle so widths are exact) ---
+    activateTab(0);
+    document.fonts?.ready.then(() => {
+      const active = tabBtns.findIndex((b) => b.getAttribute('aria-selected') === 'true');
+      positionIndicator(active >= 0 ? active : 0);
+    });
+    window.addEventListener('resize', () => {
+      const active = tabBtns.findIndex((b) => b.getAttribute('aria-selected') === 'true');
+      positionIndicator(active >= 0 ? active : 0);
+      overflowChecks[active >= 0 ? active : 0]?.();
+    });
+  });
+</script>
+
+<style>
+  .code-panel {
+    --cp-collapsed-max: 420px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--color-bg-elevated);
+  }
+
+  /* ── Tab strip (pill track + sliding indicator, kin to the segmented study) ── */
+  .cp-tabs {
+    position: relative;
+    display: flex;
+    gap: 2px;
+    padding: 5px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg);
+    overflow-x: auto;
+  }
+
+  .cp-tab {
+    position: relative;
+    z-index: 1;
+    padding: 0 var(--space-4);
+    min-height: 44px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    white-space: nowrap;
+    transition: color 180ms var(--ease-out-quint);
+  }
+
+  .cp-tab[aria-selected='true'] {
+    color: var(--color-text);
+  }
+
+  .cp-tab:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .cp-tab-indicator {
+    position: absolute;
+    top: 5px;
+    left: 0;
+    height: calc(100% - 10px);
+    border-radius: 999px;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-strong);
+    transition: transform 240ms var(--ease-out-quint), width 240ms var(--ease-out-quint);
+    pointer-events: none;
+  }
+
+  /* ── Code area ── */
+  .cp-code-wrap {
+    position: relative;
+  }
+
+  .cp-code-wrap.is-collapsed {
+    max-height: var(--cp-collapsed-max);
+    overflow: hidden;
+  }
+
+  .cp-fade-mask {
+    display: none;
+    position: absolute;
+    inset: auto 0 0;
+    height: 90px;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent, var(--color-bg-elevated));
+  }
+
+  .cp-code-wrap.is-collapsed .cp-fade-mask {
+    display: block;
+  }
+
+  /* ── Copy button (floats over the code, top right) ── */
+  .cp-copy-btn {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    transition: color 120ms, border-color 120ms;
+  }
+
+  .cp-copy-btn:hover {
+    color: var(--color-text);
+    border-color: var(--color-border-strong);
+  }
+
+  .cp-copy-btn.is-copied {
+    color: var(--color-leaf);
+    border-color: var(--color-leaf);
+  }
+
+  .cp-copy-btn:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* ── Expand / collapse toggle ── */
+  .cp-expand-btn {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: var(--space-2);
+    border: none;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    transition: color 120ms, background 120ms;
+  }
+
+  .cp-expand-btn:hover {
+    color: var(--color-text);
+    background: var(--color-bg-elevated);
+  }
+
+  .cp-expand-btn:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cp-tab-indicator,
+    .cp-tab {
+      transition: none;
+    }
+  }
+</style>
+
+<style is:global>
+  /*
+   * The Shiki <pre> is rendered by astro:components' Code (a child component),
+   * so it cannot be reached from this component's scoped styles. Site-wide rules
+   * in global.css force the Shiki theme background on .astro-code; inside code
+   * panels we use the panel's elevated token instead so the fade mask and chrome
+   * match in both themes. Specificity is deliberately higher than global.css.
+   */
+  html .code-panel .cp-code-wrap pre.astro-code {
+    background-color: transparent !important;
+    margin: 0;
+    padding: var(--space-4);
+    padding-right: calc(var(--space-4) + 56px); /* keep code clear of the copy button */
+    border-left: none;
+    border-radius: 0;
+    font-size: var(--text-xs);
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+</style>

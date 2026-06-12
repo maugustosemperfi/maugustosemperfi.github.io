@@ -1,65 +1,162 @@
 ---
+// motionLabel: caption for the quiet motion-mode switcher under the demo.
+const { motionLabel = 'Motion' } = Astro.props;
 ---
 
-<div class="study segmented-control" data-segmented>
-  <div class="segment-track" role="radiogroup" aria-label="Segmented control demo">
+<div class="study segmented-control" data-segmented data-motion="spring">
+  <div class="segment-track" data-track role="radiogroup" aria-label="Segmented control demo">
     <div class="segment-indicator" aria-hidden="true"></div>
-    <button type="button" role="radio" aria-checked="true" data-index="0">Day</button>
-    <button type="button" role="radio" aria-checked="false" data-index="1">Week</button>
-    <button type="button" role="radio" aria-checked="false" data-index="2">Month</button>
+    <button type="button" role="radio" aria-checked="true">Day</button>
+    <button type="button" role="radio" aria-checked="false">Week</button>
+    <button type="button" role="radio" aria-checked="false">Month</button>
   </div>
   <p class="study-output" data-output>Day view selected</p>
+
+  <div class="motion-meta" role="radiogroup" aria-label={motionLabel}>
+    <span aria-hidden="true">{motionLabel}:</span>
+    <button type="button" role="radio" aria-checked="false" data-easing="ease">ease</button>
+    <button type="button" role="radio" aria-checked="false" data-easing="ease-out-quint">ease-out-quint</button>
+    <button type="button" role="radio" aria-checked="true" data-easing="spring">spring</button>
+  </div>
 </div>
 
 <script>
   const root = document.querySelector('[data-segmented]');
   if (!root) throw new Error('Segmented control root not found');
 
-  const track = root.querySelector('.segment-track');
+  const track = root.querySelector('[data-track]');
   const indicator = root.querySelector('.segment-indicator');
-  const buttons = Array.from(root.querySelectorAll('button[role="radio"]'));
+  const segments = Array.from(track.querySelectorAll('button[role="radio"]'));
   const output = root.querySelector('[data-output]');
+  const easingButtons = Array.from(root.querySelectorAll('[data-easing]'));
   const labels = ['Day view selected', 'Week view selected', 'Month view selected'];
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  function moveIndicator(index) {
-    const btn = buttons[index];
-    if (!indicator || !btn) return;
-    indicator.style.width = `${btn.offsetWidth}px`;
-    indicator.style.transform = `translateX(${btn.offsetLeft}px)`;
+  const TAP_SLOP = 4; // px of pointer travel before a press becomes a drag
+
+  let selectedIndex = 0;
+  let drag = null; // { startX, thumbX, moved }
+
+  /* Wires click + arrow-key selection for a group of role="radio" buttons. */
+  function radioGroup(buttons, onSelect) {
+    buttons.forEach((btn, index) => {
+      btn.addEventListener('click', () => onSelect(index));
+      btn.addEventListener('keydown', (event) => {
+        const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+        if (!step) return;
+        event.preventDefault();
+        const next = (index + step + buttons.length) % buttons.length;
+        onSelect(next);
+        buttons[next].focus();
+      });
+    });
+  }
+
+  function markActive(index) {
+    segments.forEach((btn, i) => {
+      const on = i === index;
+      btn.setAttribute('aria-checked', String(on));
+      btn.classList.toggle('active', on);
+      btn.tabIndex = on ? 0 : -1;
+    });
+  }
+
+  function placeThumb(x, width) {
+    indicator.style.width = `${width}px`;
+    indicator.style.transform = `translateX(${x}px)`;
+  }
+
+  function nearestIndex(centerX) {
+    let best = 0;
+    let bestDistance = Infinity;
+    segments.forEach((btn, i) => {
+      const distance = Math.abs(btn.offsetLeft + btn.offsetWidth / 2 - centerX);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = i;
+      }
+    });
+    return best;
   }
 
   function select(index) {
-    buttons.forEach((btn, i) => {
-      const selected = i === index;
-      btn.setAttribute('aria-checked', String(selected));
-      btn.classList.toggle('active', selected);
-    });
-    if (output) output.textContent = labels[index];
-    moveIndicator(index);
+    selectedIndex = index;
+    markActive(index);
+    output.textContent = labels[index];
+    placeThumb(segments[index].offsetLeft, segments[index].offsetWidth);
   }
 
-  buttons.forEach((btn, index) => {
-    btn.addEventListener('click', () => select(index));
-    btn.addEventListener('keydown', (e) => {
-      let next = index;
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (index + 1) % buttons.length;
-      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (index - 1 + buttons.length) % buttons.length;
-      else return;
-      e.preventDefault();
-      select(next);
-      buttons[next].focus();
-    });
+  /* Dragging: the thumb follows the pointer, snaps to the nearest segment on release. */
+  track.addEventListener('pointerdown', (event) => {
+    track.setPointerCapture(event.pointerId);
+    drag = { startX: event.clientX, thumbX: indicator.offsetLeft, moved: false };
   });
 
-  select(0);
-  window.addEventListener('resize', () => {
-    const active = buttons.findIndex((b) => b.classList.contains('active'));
-    moveIndicator(active >= 0 ? active : 0);
+  track.addEventListener('pointermove', (event) => {
+    if (!drag) return;
+    if (!drag.moved && Math.abs(event.clientX - drag.startX) < TAP_SLOP) return;
+    drag.moved = true;
+    root.classList.add('is-dragging'); // kills the transition: direct manipulation
+
+    const rect = track.getBoundingClientRect();
+    const width = indicator.offsetWidth;
+    const min = segments[0].offsetLeft;
+    const max = segments[segments.length - 1].offsetLeft + segments[segments.length - 1].offsetWidth - width;
+    drag.thumbX = Math.min(Math.max(event.clientX - rect.left - width / 2, min), max);
+
+    indicator.style.transform = `translateX(${drag.thumbX}px)`;
+    markActive(nearestIndex(drag.thumbX + width / 2)); // segment under the thumb reads as active
   });
+
+  function endDrag(event) {
+    if (!drag) return;
+    const { moved, thumbX } = drag;
+    drag = null;
+    root.classList.remove('is-dragging');
+    if (moved) {
+      select(nearestIndex(thumbX + indicator.offsetWidth / 2));
+    } else {
+      const rect = track.getBoundingClientRect();
+      select(nearestIndex(event.clientX - rect.left)); // plain tap: pick the segment under it
+    }
+  }
+
+  track.addEventListener('pointerup', endDrag);
+  track.addEventListener('pointercancel', endDrag);
+
+  radioGroup(segments, select);
+
+  /* Quiet meta-control: lets you feel ease vs ease-out-quint vs spring. */
+  radioGroup(easingButtons, (index) => {
+    easingButtons.forEach((btn, i) => {
+      btn.setAttribute('aria-checked', String(i === index));
+      btn.tabIndex = i === index ? 0 : -1;
+    });
+    root.dataset.motion = easingButtons[index].dataset.easing;
+  });
+  easingButtons.forEach((btn) => {
+    btn.tabIndex = btn.getAttribute('aria-checked') === 'true' ? 0 : -1;
+  });
+
+  /* First paint without animation, then re-place once fonts settle. */
+  root.classList.add('is-dragging');
+  select(0);
+  requestAnimationFrame(() => root.classList.remove('is-dragging'));
+  document.fonts?.ready.then(() => placeThumb(segments[selectedIndex].offsetLeft, segments[selectedIndex].offsetWidth));
+  window.addEventListener('resize', () => select(selectedIndex));
 </script>
 
 <style>
+  .segmented-control {
+    /* Damped spring (stiffness 380, damping 24, mass 1) sampled into linear():
+       ~8% overshoot, settles in ~350ms of the 500ms window. */
+    --spring: linear(
+      0, 0.069, 0.231, 0.427, 0.619, 0.785, 0.913, 1.001, 1.055, 1.081, 1.086,
+      1.078, 1.063, 1.046, 1.03, 1.016, 1.006, 0.999, 0.995, 0.993, 0.993,
+      0.994, 0.995, 0.996, 1
+    );
+    text-align: center;
+  }
+
   .segment-track {
     position: relative;
     display: inline-flex;
@@ -68,17 +165,32 @@
     background: var(--color-bg-elevated);
     padding: 4px;
     gap: 2px;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   .segment-indicator {
     position: absolute;
     top: 4px;
-    left: 4px;
+    left: 0;
     height: calc(100% - 8px);
     border-radius: 999px;
     background: var(--color-accent);
-    transition: transform 320ms var(--ease-out-quint), width 320ms var(--ease-out-quint);
+    transition: transform 500ms var(--spring), width 240ms var(--ease-out-quint);
     pointer-events: none;
+  }
+
+  [data-motion='ease'] .segment-indicator {
+    transition: transform 320ms ease, width 240ms ease;
+  }
+
+  [data-motion='ease-out-quint'] .segment-indicator {
+    transition: transform 320ms var(--ease-out-quint), width 240ms var(--ease-out-quint);
+  }
+
+  .is-dragging .segment-indicator {
+    transition: none;
   }
 
   .segment-track button {
@@ -113,8 +225,48 @@
     font-size: var(--text-sm);
   }
 
+  .motion-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    margin-top: var(--space-6);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
+  }
+
+  .motion-meta button {
+    min-height: 44px;
+    padding: 0 var(--space-2);
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+    font: inherit;
+    transition: color 150ms var(--ease-out-quint);
+  }
+
+  .motion-meta button[aria-checked='true'] {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .motion-meta button:hover {
+    color: var(--color-text-secondary);
+  }
+
+  .motion-meta button:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .segment-indicator {
+    [data-segmented] .segment-indicator,
+    .segment-track button,
+    .motion-meta button {
       transition: none;
     }
   }

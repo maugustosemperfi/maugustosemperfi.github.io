@@ -2,40 +2,127 @@
 ---
 
 <div class="study magnetic-study">
-  <button type="button" class="magnetic-btn" data-magnetic>
-    <span>Hover me</span>
-  </button>
+  <div class="magnetic-zone" data-magnetic-zone>
+    <button type="button" class="magnetic-btn" data-magnetic>
+      <span class="magnetic-label">Hover me</span>
+    </button>
+  </div>
   <p class="study-note">Cursor proximity attraction on pointer devices; press animation on touch.</p>
 </div>
 
 <script>
-  const btn = document.querySelector('[data-magnetic]');
-  if (!btn) throw new Error('Magnetic button not found');
+  const zone = document.querySelector('[data-magnetic-zone]');
+  const button = zone?.querySelector('[data-magnetic]');
+  const label = button?.querySelector('.magnetic-label');
+  if (!zone || !button || !label) throw new Error('Magnetic button not found');
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const finePointer = window.matchMedia('(pointer: fine)').matches;
+  const hoverless = window.matchMedia('(hover: none)').matches;
 
-  btn.addEventListener('pointerdown', () => btn.classList.add('pressed'));
-  btn.addEventListener('pointerup', () => btn.classList.remove('pressed'));
-  btn.addEventListener('pointerleave', () => btn.classList.remove('pressed'));
+  const RADIUS = 150; // px from the button center where attraction reaches zero
+  const PULL = 0.34; // fraction of the cursor offset transferred to the button
+  const LABEL_LAG = 0.4; // label trails behind: it keeps ~60% of the button's travel
+  const STIFFNESS = 320; // spring constants give zeta ~0.39 -> visible overshoot on release
+  const DAMPING = 14;
 
-  if (finePointer && !reduced) {
-    btn.addEventListener('pointermove', (e) => {
-      const rect = btn.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      const dx = (e.clientX - cx) * 0.18;
-      const dy = (e.clientY - cy) * 0.18;
-      btn.style.transform = `translate(${dx}px, ${dy}px)`;
+  const AXES = ['x', 'y', 'scale'];
+  const EPSILON = { x: 0.1, y: 0.1, scale: 0.002 };
+  const current = { x: 0, y: 0, scale: 1 };
+  const velocity = { x: 0, y: 0, scale: 0 };
+  const target = { x: 0, y: 0, scale: 1 };
+  let lastTime = 0;
+  let frame = 0;
+
+  function render() {
+    button.style.transform = `translate3d(${current.x}px, ${current.y}px, 0) scale(${current.scale})`;
+    label.style.transform = `translate3d(${-current.x * LABEL_LAG}px, ${-current.y * LABEL_LAG}px, 0)`;
+  }
+
+  function settled() {
+    return AXES.every(
+      (axis) =>
+        Math.abs(current[axis] - target[axis]) < EPSILON[axis] &&
+        Math.abs(velocity[axis]) < EPSILON[axis] * 20,
+    );
+  }
+
+  function tick(now) {
+    const dt = Math.min((now - lastTime) / 1000, 1 / 30);
+    lastTime = now;
+    for (const axis of AXES) {
+      const displacement = current[axis] - target[axis];
+      velocity[axis] += (-STIFFNESS * displacement - DAMPING * velocity[axis]) * dt;
+      current[axis] += velocity[axis] * dt;
+    }
+    if (settled()) {
+      Object.assign(current, target);
+      Object.assign(velocity, { x: 0, y: 0, scale: 0 });
+      render();
+      frame = 0;
+      return;
+    }
+    render();
+    frame = requestAnimationFrame(tick);
+  }
+
+  function wake() {
+    if (frame) return;
+    lastTime = performance.now();
+    frame = requestAnimationFrame(tick);
+  }
+
+  function press(down) {
+    button.classList.toggle('pressed', down);
+    if (reduced) return; // press reads through color only — no motion
+    target.scale = down ? 0.94 : 1;
+    wake();
+  }
+
+  button.addEventListener('pointerdown', () => press(true));
+  button.addEventListener('pointerup', () => press(false));
+  button.addEventListener('pointercancel', () => press(false));
+  button.addEventListener('pointerleave', () => press(false));
+  button.addEventListener('keydown', (e) => {
+    if (e.key === ' ' || e.key === 'Enter') press(true);
+  });
+  button.addEventListener('keyup', (e) => {
+    if (e.key === ' ' || e.key === 'Enter') press(false);
+  });
+
+  if (!hoverless && !reduced) {
+    zone.addEventListener('pointermove', (event) => {
+      const rect = button.getBoundingClientRect();
+      // Measure from the rest-position center, not the translated one.
+      const dx = event.clientX - (rect.left + rect.width / 2 - current.x);
+      const dy = event.clientY - (rect.top + rect.height / 2 - current.y);
+      const distance = Math.hypot(dx, dy);
+      const t = Math.max(0, 1 - distance / RADIUS);
+      const falloff = t * t * (3 - 2 * t); // smoothstep: full pull up close, zero at the radius
+      target.x = dx * PULL * falloff;
+      target.y = dy * PULL * falloff;
+      wake();
     });
 
-    btn.addEventListener('pointerleave', () => {
-      btn.style.transform = '';
+    zone.addEventListener('pointerleave', () => {
+      target.x = 0;
+      target.y = 0;
+      wake(); // the spring carries it home with a small overshoot
     });
   }
 </script>
 
 <style>
+  .magnetic-study {
+    text-align: center;
+  }
+
+  .magnetic-zone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-12) var(--space-16);
+  }
+
   .magnetic-btn {
     display: inline-flex;
     align-items: center;
@@ -50,10 +137,13 @@
     font: inherit;
     font-size: var(--text-base);
     font-weight: 700;
-    transition:
-      transform 180ms var(--ease-out-quint),
-      background 180ms var(--ease-out-quint),
-      border-color 180ms var(--ease-out-quint);
+    will-change: transform;
+    transition: background 180ms var(--ease-out-quint), border-color 180ms var(--ease-out-quint);
+  }
+
+  .magnetic-label {
+    display: inline-block;
+    will-change: transform;
   }
 
   .magnetic-btn:hover {
@@ -61,7 +151,6 @@
   }
 
   .magnetic-btn.pressed {
-    transform: scale(0.96) !important;
     background: var(--color-chip-bg);
   }
 
@@ -74,11 +163,5 @@
     margin: var(--space-4) 0 0;
     color: var(--color-text-secondary);
     font-size: var(--text-sm);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .magnetic-btn {
-      transition: background 180ms, border-color 180ms;
-    }
   }
 </style>

@@ -2,109 +2,177 @@
 ---
 
 <div class="study card-stack-study" data-card-stack>
-  <div class="stack" aria-label="Swipeable card stack demo">
-    <article class="stack-card" data-card style="--i: 0">Design tokens</article>
-    <article class="stack-card" data-card style="--i: 1">Motion specs</article>
-    <article class="stack-card" data-card style="--i: 2">Release notes</article>
+  <div
+    class="stack"
+    data-stack
+    tabindex="0"
+    role="group"
+    aria-label="Card stack demo. Press Enter or the arrow keys to send the top card to the back."
+  >
+    <article class="stack-card" data-card>Design tokens</article>
+    <article class="stack-card" data-card>Motion specs</article>
+    <article class="stack-card" data-card>Release notes</article>
   </div>
-  <p class="study-note">Drag the top card left or right. Works with mouse and touch.</p>
+  <p class="study-note">Flick the top card with mouse or touch — or focus the stack and use the arrow keys.</p>
 </div>
 
 <script>
-  const stackRoot = document.querySelector('[data-card-stack]');
-  const stack = stackRoot?.querySelector('.stack');
+  const root = document.querySelector('[data-card-stack]');
+  const stack = root?.querySelector('[data-stack]');
   if (!stack) throw new Error('Card stack not found');
 
-  /** Visual order: index 0 is the top card. Rotated on each successful swipe. */
+  /** Visual order: index 0 is the top card. Rotated on each dismissal. */
   let deck = Array.from(stack.querySelectorAll('[data-card]'));
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let active = null;
-  let startX = 0;
-  let currentX = 0;
+
+  const DISMISS_DISTANCE = 90; // px of drag that counts as a deliberate dismiss
+  const FLICK_VELOCITY = 0.6; // px/ms of release speed that counts as a flick
+  const COMFORT_RANGE = 140; // px of free travel before rubber-band resistance
+  const MAX_ROTATION = 9; // deg of card tilt at full comfortable range
+
+  let drag = null; // { card, startX, x, samples }
   let animating = false;
 
-  function layout() {
+  /* Past COMFORT_RANGE the extra displacement decays, asymptotically capping at 2x. */
+  function rubberBand(offset) {
+    const magnitude = Math.abs(offset);
+    if (magnitude <= COMFORT_RANGE) return offset;
+    const excess = magnitude - COMFORT_RANGE;
+    return Math.sign(offset) * (COMFORT_RANGE + (excess * COMFORT_RANGE) / (excess + COMFORT_RANGE));
+  }
+
+  /* Average pointer velocity (px/ms) over the last ~80ms of movement. */
+  function releaseVelocity(samples) {
+    const now = performance.now();
+    const recent = samples.filter((s) => now - s.t < 80);
+    if (recent.length < 2) return 0;
+    const first = recent[0];
+    const last = recent[recent.length - 1];
+    return last.t > first.t ? (last.x - first.x) / (last.t - first.t) : 0;
+  }
+
+  function slotTransform(i) {
+    return `translateY(${i * 6}px) scale(${1 - i * 0.03})`;
+  }
+
+  /* `stagger` is used right after a cycle: the promoted cards settle with a
+     springy, staggered re-layer while the dismissed card slips in behind. */
+  function layout(stagger = false) {
     deck.forEach((card, i) => {
-      const offset = i * 6;
       card.style.zIndex = String(deck.length - i);
-      if (card !== active) {
-        card.style.transform = `translateY(${offset}px) scale(${1 - i * 0.03})`;
-        card.style.opacity = '';
-      }
+      if (drag && card === drag.card) return;
+      const isRecycled = stagger && i === deck.length - 1;
+      card.style.transition =
+        reduced || !stagger || isRecycled ? 'none' : `transform 550ms var(--spring-settle) ${i * 50}ms`;
+      card.style.transform = slotTransform(i);
     });
   }
 
-  function onStart(e) {
-    if (animating) return;
-    const card = e.currentTarget;
+  function cycleTop(direction, speed = 0, fromX = 0) {
+    const card = deck[0];
+    if (!card || animating) return;
+
+    if (reduced) {
+      deck = [...deck.slice(1), card];
+      card.style.opacity = '';
+      layout(true);
+      return;
+    }
+
+    animating = true;
+    const exitX = direction * (stack.offsetWidth * 1.6 + 80);
+    // A faster flick exits faster: duration follows the remaining distance.
+    const remaining = Math.abs(exitX - fromX);
+    const duration = speed > 0 ? Math.min(420, Math.max(160, remaining / speed)) : 300;
+
+    card.style.transition = `transform ${duration}ms cubic-bezier(0.2, 0.6, 0.4, 1), opacity ${duration}ms ease-out`;
+    card.style.transform = `translateX(${exitX}px) rotate(${direction * 14}deg)`;
+    card.style.opacity = '0';
+
+    setTimeout(() => {
+      deck = [...deck.slice(1), card];
+      card.style.opacity = '';
+      layout(true);
+      animating = false;
+    }, duration + 30);
+  }
+
+  function onPointerDown(event) {
+    if (animating || drag) return;
+    const card = event.currentTarget;
     if (card !== deck[0]) return;
-
-    active = card;
-    startX = e.clientX;
-    card.setPointerCapture(e.pointerId);
-    card.style.transition = reduced ? 'none' : 'transform 80ms linear';
+    drag = { card, startX: event.clientX, x: 0, samples: [] };
+    card.setPointerCapture(event.pointerId);
+    card.style.transition = 'none';
   }
 
-  function onMove(e) {
-    if (!active) return;
-    currentX = e.clientX - startX;
-    const rotate = currentX * 0.04;
-    active.style.transform = `translateX(${currentX}px) rotate(${rotate}deg)`;
+  function onPointerMove(event) {
+    if (!drag || event.currentTarget !== drag.card) return;
+    drag.x = event.clientX - drag.startX;
+    drag.samples.push({ t: performance.now(), x: event.clientX });
+    if (drag.samples.length > 8) drag.samples.shift();
+
+    const shown = rubberBand(drag.x);
+    const rotation = Math.max(-MAX_ROTATION, Math.min(MAX_ROTATION, (shown / COMFORT_RANGE) * MAX_ROTATION));
+    drag.card.style.transform = `translateX(${shown}px) rotate(${rotation}deg)`;
   }
 
-  function onEnd(e) {
-    if (!active) return;
+  function onPointerUp() {
+    if (!drag) return;
+    const { card, x, samples } = drag;
+    drag = null;
 
-    const card = active;
-    card.releasePointerCapture?.(e.pointerId);
-
-    const threshold = 80;
-    card.style.transition = reduced
-      ? 'none'
-      : 'transform 280ms var(--ease-out-quint), opacity 280ms var(--ease-out-quint)';
-
-    if (Math.abs(currentX) > threshold) {
-      animating = true;
-      const dir = currentX > 0 ? 1 : -1;
-      card.style.transform = `translateX(${dir * 320}px) rotate(${dir * 12}deg)`;
-      card.style.opacity = '0';
-
-      const duration = reduced ? 0 : 280;
-      setTimeout(() => {
-        deck = [...deck.slice(1), deck[0]];
-        card.style.opacity = '';
-        card.style.transform = '';
-        card.style.transition = '';
-        active = null;
-        currentX = 0;
-        animating = false;
-        layout();
-      }, duration);
+    const velocity = releaseVelocity(samples);
+    if (Math.abs(velocity) >= FLICK_VELOCITY) {
+      cycleTop(Math.sign(velocity), Math.abs(velocity), rubberBand(x));
+    } else if (Math.abs(x) > DISMISS_DISTANCE) {
+      cycleTop(Math.sign(x), 0, rubberBand(x));
     } else {
-      card.style.transform = '';
-      active = null;
-      currentX = 0;
-      layout();
+      card.style.transition = reduced ? 'none' : 'transform 550ms var(--spring-settle)';
+      card.style.transform = slotTransform(0);
     }
   }
 
   deck.forEach((card) => {
-    card.addEventListener('pointerdown', onStart);
-    card.addEventListener('pointermove', onMove);
-    card.addEventListener('pointerup', onEnd);
-    card.addEventListener('pointercancel', onEnd);
+    card.addEventListener('pointerdown', onPointerDown);
+    card.addEventListener('pointermove', onPointerMove);
+    card.addEventListener('pointerup', onPointerUp);
+    card.addEventListener('pointercancel', onPointerUp);
+  });
+
+  stack.addEventListener('keydown', (event) => {
+    const direction = { ArrowRight: 1, ArrowLeft: -1, Enter: 1, ' ': 1 }[event.key];
+    if (!direction) return;
+    event.preventDefault();
+    cycleTop(direction);
   });
 
   layout();
 </script>
 
 <style>
+  .card-stack-study {
+    /* Damped spring (stiffness 320, damping 22, mass 1) sampled into linear():
+       ~8% overshoot, settles within the 550ms window. */
+    --spring-settle: linear(
+      0, 0.071, 0.234, 0.433, 0.626, 0.792, 0.919, 1.006, 1.058, 1.082, 1.086,
+      1.077, 1.061, 1.044, 1.028, 1.014, 1.005, 0.998, 0.994, 0.993, 0.993,
+      0.994, 0.995, 0.997, 1
+    );
+  }
+
   .stack {
     position: relative;
     width: min(280px, 100%);
     height: 200px;
     margin: 0 auto;
-    touch-action: none;
+    touch-action: pan-y;
+    border-radius: 12px;
+  }
+
+  .stack:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 6px;
   }
 
   .stack-card {
@@ -123,6 +191,7 @@
     font-size: var(--text-lg);
     font-weight: 700;
     user-select: none;
+    -webkit-user-select: none;
     will-change: transform;
   }
 
