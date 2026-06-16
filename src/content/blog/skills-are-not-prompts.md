@@ -6,7 +6,6 @@ pubDate: '2026-06-02'
 
 Since the era of agentic development started, I've been really curious about what skills are capable of. 
 
-
 At the start I was asking myself: Are they a workflow? Are they a repetitive task that can be summarized in a command?
 
 Turns out that to me they can be anything I need them to. Anything!
